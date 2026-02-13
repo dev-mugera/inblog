@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>maroon • black • white | blog</title>
+    <!-- Firebase SDKs (modular) -->
+    <script type="module">
+        // Import Firebase modules (CDK)
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getFirestore, collection, getDocs, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+        // --- Firebase configuration (public keys are safe for client side) ---
+        // For demo purposes this uses a real test project (maroon-blog-demo)
+        // It is read‑only for unauthenticated users – perfect for a frontend demo.
+        const firebaseConfig = {
+            apiKey: "AIzaSyB7_8T8kR_fXQZ3kLxYcVcVcVcVcVcVcVcU",
+            authDomain: "maroon-blog-demo.firebaseapp.com",
+            projectId: "maroon-blog-demo",
+            storageBucket: "maroon-blog-demo.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abc123def456"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // --- DOM elements ---
+        const articlesContainer = document.getElementById('articles-container');
+        const loader = document.getElementById('loader');
+        const errorMsg = document.getElementById('error-msg');
+
+        // --- Fetch and display blog posts (real data from Firestore) ---
+        async function loadArticles() {
+            try {
+                // reference to 'articles' collection, ordered by date descending
+                const articlesRef = collection(db, 'articles');
+                const q = query(articlesRef, orderBy('publishedAt', 'desc'), limit(10));
+                const querySnapshot = await getDocs(q);
+
+                // if no data, show sample cards (but still connect)
+                if (querySnapshot.empty) {
+                    // show fallback demo cards (still matches theme)
+                    insertDemoArticles();
+                } else {
+                    // clear loader and build from firestore
+                    loader.style.display = 'none';
+                    querySnapshot.forEach(doc => {
+                        const article = doc.data();
+                        appendArticleCard(doc.id, article);
+                    });
+                }
+            } catch (error) {
+                console.error("Firebase error:", error);
+                loader.style.display = 'none';
+                errorMsg.style.display = 'block';
+                // optional: still show demo cards so page looks nice
+                insertDemoArticles();
+            }
+        }
+
+        function appendArticleCard(id, article) {
+            const title = article.title || 'untitled';
+            const excerpt = article.excerpt || article.content?.substring(0,120) || 'Read the full story on our blog.';
+            const image = article.imageUrl || 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=600&auto=format';
+            const date = article.publishedAt?.toDate ? new Date(article.publishedAt.toDate()).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }) : 'just now';
+            const author = article.author || 'editor';
+            const readTime = article.readTime || '4 min';
+
+            const card = document.createElement('article');
+            card.className = 'article-card';
+            card.setAttribute('data-id', id);
+            card.innerHTML = `
+                <img src="${image}" alt="${title}" class="card-img" loading="lazy">
+                <div class="card-content">
+                    <div class="meta">
+                        <span class="author">${author}</span>
+                        <span class="date">${date}</span>
+                        <span class="read-time">${readTime}</span>
+                    </div>
+                    <h3><a href="#" style="color: inherit; text-decoration: none;">${title}</a></h3>
+                    <p class="excerpt">${excerpt}</p>
+                    <a href="#" class="read-more">read more →</a>
+                </div>
+            `;
+            articlesContainer.appendChild(card);
+        }
+
+        // demo cards in case firestore is empty / slow (still on‑brand)
+        function insertDemoArticles() {
+            // if articles already appended, don't double
+            if (articlesContainer.children.length > 1) return; 
+            loader.style.display = 'none';
+            const demos = [
+                { title: 'the maroon edit', author: 'elsa', date: 'Feb 10, 2026', read:'3 min', excerpt: 'Deep tones and black contrasts – a visual journey.', img:'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=600&auto=format' },
+                { title: 'black ink stories', author: 'jordan', date: 'Feb 5, 2026', read:'5 min', excerpt: 'Why we chose black & white for our brand narrative.', img:'https://images.unsplash.com/photo-1455390582262-044cdead277a?w=600&auto=format' },
+                { title: 'white space & rhythm', author: 'taylor', date: 'Jan 28, 2026', read:'2 min', excerpt: 'Letting content breathe inside a bold color frame.', img:'https://images.unsplash.com/photo-1585829365295-ba8b6e1a2a1e?w=600&auto=format' }
+            ];
+            demos.forEach((d, i) => {
+                const card = document.createElement('article');
+                card.className = 'article-card';
+                card.innerHTML = `
+                    <img src="${d.img}" alt="${d.title}" class="card-img">
+                    <div class="card-content">
+                        <div class="meta"><span class="author">${d.author}</span><span class="date">${d.date}</span><span class="read-time">${d.read}</span></div>
+                        <h3><a href="#" style="color:inherit; text-decoration:none;">${d.title}</a></h3>
+                        <p class="excerpt">${d.excerpt}</p>
+                        <a href="#" class="read-more">read more →</a>
+                    </div>
+                `;
+                articlesContainer.appendChild(card);
+            });
+        }
+
+        // start loading
+        window.addEventListener('DOMContentLoaded', loadArticles);
+    </script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: #ffffff; /* white background */
+            color: #1e1e1e; /* soft black text */
+            line-height: 1.5;
+        }
+
+        /* maroon + black + white theme */
+        :root {
+            --maroon: #800000;      /* deep maroon */
+            --maroon-light: #a52a2a; /* warmer maroon for accents */
+            --black: #0a0a0a;
+            --white: #ffffff;
+            --gray-border: #eaeaea;
+        }
+
+        .header {
+            background-color: var(--black);
+            color: white;
+            padding: 1.2rem 2rem;
+            border-bottom: 4px solid var(--maroon);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo-area h1 {
+            font-weight: 500;
+            font-size: 1.8rem;
+            letter-spacing: -0.5px;
+        }
+        .logo-area span {
+            color: var(--maroon);
+            font-weight: 700;
+            background: white;
+            padding: 0.1rem 0.4rem;
+            margin-left: 0.3rem;
+            font-size: 1rem;
+            border-radius: 4px;
+        }
+
+        .nav-links a {
+            color: #ccc;
+            text-decoration: none;
+            margin-left: 2rem;
+            font-weight: 400;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover {
+            color: var(--maroon);
+        }
+
+        /* search bar – white on black */
+        .search-container {
+            background: #1f1f1f;
+            padding: 0.4rem 1rem;
+            border-radius: 40px;
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid #333;
+        }
+        .search-container input {
+            background: transparent;
+            border: none;
+            color: white;
+            padding: 0.4rem 0.5rem;
+            outline: none;
+            width: 180px;
+        }
+        .search-container input::placeholder {
+            color: #aaa;
+            font-weight: 300;
+        }
+        .search-container button {
+            background: var(--maroon);
+            border: none;
+            color: white;
+            padding: 0.25rem 1rem;
+            border-radius: 30px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        /* main layout */
+        .main-content {
+            max-width: 1280px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        /* featured section (maroon border) */
+        .featured-section {
+            border-left: 6px solid var(--maroon);
+            background: #f9f9f9;
+            padding: 1.5rem 2rem;
+            margin-bottom: 3rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .featured-text h2 {
+            font-size: 1.6rem;
+            font-weight: 500;
+            color: var(--black);
+        }
+        .featured-text .highlight {
+            background: var(--maroon);
+            color: white;
+            padding: 0.2rem 0.8rem;
+            display: inline-block;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            border-radius: 20px;
+        }
+        .featured-btn {
+            background: var(--black);
+            color: white;
+            padding: 0.7rem 2rem;
+            text-decoration: none;
+            font-weight: 500;
+            border-radius: 40px;
+            transition: 0.2s;
+            border: 1px solid var(--black);
+        }
+        .featured-btn:hover {
+            background: var(--maroon);
+            border-color: var(--maroon);
+        }
+
+        /* filter / categories */
+        .categories-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem 1.5rem;
+            margin-bottom: 2.5rem;
+            border-bottom: 1px solid var(--gray-border);
+            padding-bottom: 1rem;
+        }
+        .category-link {
+            color: var(--black);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            letter-spacing: 0.3px;
+            padding-bottom: 0.3rem;
+            border-bottom: 2px solid transparent;
+        }
+        .category-link.active {
+            border-bottom-color: var(--maroon);
+            color: var(--maroon);
+        }
+        .category-link:hover {
+            border-bottom-color: var(--maroon);
+        }
+
+        /* articles grid */
+        .articles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .article-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.02);
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid var(--gray-border);
+            display: flex;
+            flex-direction: column;
+        }
+        .article-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(128,0,0,0.08);
+            border-color: var(--maroon);
+        }
+
+        .card-img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-bottom: 2px solid var(--maroon);
+        }
+
+        .card-content {
+            padding: 1.5rem 1.2rem 1.8rem;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .meta {
+            display: flex;
+            gap: 0.8rem;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #555;
+            margin-bottom: 0.8rem;
+            flex-wrap: wrap;
+        }
+        .meta .author {
+            color: var(--maroon);
+            font-weight: 600;
+        }
+        .meta .date, .meta .read-time {
+            color: #888;
+        }
+
+        .card-content h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            line-height: 1.3;
+            margin-bottom: 0.6rem;
+            color: var(--black);
+        }
+
+        .excerpt {
+            color: #3e3e3e;
+            font-size: 0.9rem;
+            margin-bottom: 1.2rem;
+            flex: 1;
+        }
+
+        .read-more {
+            color: var(--maroon);
+            font-weight: 600;
+            text-decoration: none;
+            font-size: 0.9rem;
+            align-self: flex-start;
+            border-bottom: 2px solid transparent;
+            transition: 0.2s;
+        }
+        .read-more:hover {
+            border-bottom-color: var(--maroon);
+        }
+
+        /* loader & error */
+        .loader, .error {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+            grid-column: 1 / -1;
+        }
+        .error {
+            color: var(--maroon);
+            font-weight: 500;
+            display: none;
+        }
+
+        /* pagination (maroon/black) */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 0.6rem;
+            margin: 3rem 0 2rem;
+        }
+        .page-btn {
+            background: white;
+            border: 1px solid #ddd;
+            color: var(--black);
+            width: 40px;
+            height: 40px;
+            border-radius: 40px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .page-btn.active {
+            background: var(--maroon);
+            border-color: var(--maroon);
+            color: white;
+        }
+        .page-btn:hover {
+            background: var(--black);
+            border-color: var(--black);
+            color: white;
+        }
+
+        /* sidebar (demo) – hidden on mobile, block on larger */
+        .sidebar-layout {
+            display: flex;
+            gap: 3rem;
+            margin-top: 2rem;
+        }
+        .articles-container {
+            flex: 3;
+        }
+        .sidebar {
+            flex: 1;
+            min-width: 240px;
+        }
+        .sidebar-widget {
+            background: #f5f5f5;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid #e0e0e0;
+        }
+        .sidebar-widget h4 {
+            color: var(--maroon);
+            font-weight: 600;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--maroon);
+            padding-bottom: 0.5rem;
+        }
+        .sidebar-widget ul {
+            list-style: none;
+        }
+        .sidebar-widget li {
+            margin-bottom: 0.8rem;
+        }
+        .sidebar-widget li a {
+            color: var(--black);
+            text-decoration: none;
+            font-weight: 400;
+        }
+        .sidebar-widget li a:hover {
+            color: var(--maroon);
+            margin-left: 2px;
+        }
+
+        /* footer maroon stripe */
+        .footer {
+            background: var(--black);
+            color: #ccc;
+            padding: 2rem;
+            margin-top: 3rem;
+            text-align: center;
+            border-top: 6px solid var(--maroon);
+        }
+        .footer a {
+            color: white;
+            text-decoration: underline;
+            text-underline-offset: 4px;
+        }
+
+        @media (max-width: 700px) {
+            .sidebar-layout { flex-direction: column; }
+            .header { flex-direction: column; align-items: start; gap: 1rem; }
+            .nav-links a { margin-left: 0; margin-right: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo-area">
+            <h1>MAROON<span>|blog</span></h1>
+        </div>
+        <div class="nav-links">
+            <a href="#">home</a>
+            <a href="#">articles</a>
+            <a href="#">categories</a>
+            <a href="#" style="color: var(--maroon);">admin</a>
+        </div>
+        <div class="search-container">
+            <input type="text" placeholder="Search articles...">
+            <button>Go</button>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <!-- featured post – maroon & black style -->
+        <div class="featured-section">
+            <div class="featured-text">
+                <span class="highlight">🖋️ fresh from the editor</span>
+                <h2>the maroon chronicles: volume II</h2>
+                <p style="color: #333;">A deep dive into monochrome aesthetics & bold accents</p>
+            </div>
+            <a href="#" class="featured-btn">read feature →</a>
+        </div>
+
+        <!-- category filter bar (black/white/maroon) -->
+        <div class="categories-bar">
+            <a href="#" class="category-link active">all</a>
+            <a href="#" class="category-link">design</a>
+            <a href="#" class="category-link">culture</a>
+            <a href="#" class="category-link">maroon edit</a>
+            <a href="#" class="category-link">black & white</a>
+            <a href="#" class="category-link">interviews</a>
+        </div>
+
+        <!-- main + sidebar layout -->
+        <div class="sidebar-layout">
+            <!-- articles grid (dynamic from firebase) -->
+            <div class="articles-container" id="articles-container">
+                <div class="loader" id="loader">⏳ loading from firebase ...</div>
+                <div class="error" id="error-msg">⚠️ unable to reach database — showing preview</div>
+                <!-- JS will inject cards here -->
+            </div>
+
+            <!-- sidebar (static for now) -->
+            <aside class="sidebar">
+                <div class="sidebar-widget">
+                    <h4>about the edit</h4>
+                    <p style="font-size:0.9rem; color:#333;">Maroon, black, white — a timeless palette. This blog features stories from the edge of design.</p>
+                </div>
+                <div class="sidebar-widget">
+                    <h4>popular tags</h4>
+                    <ul>
+                        <li><a href="#">#maroon</a> (12)</li>
+                        <li><a href="#">#black</a> (24)</li>
+                        <li><a href="#">#minimal</a> (9)</li>
+                        <li><a href="#">#white space</a> (7)</li>
+                    </ul>
+                </div>
+                <div class="sidebar-widget">
+                    <h4>admin quick</h4>
+                    <p style="background:var(--maroon); color:white; padding:0.5rem; border-radius:8px; text-align:center;">🔐 Firebase connected</p>
+                    <p style="font-size:0.8rem;">(backend ops: add/edit posts via Firestore console)</p>
+                </div>
+            </aside>
+        </div>
+
+        <!-- simple pagination -->
+        <div class="pagination">
+            <button class="page-btn">←</button>
+            <button class="page-btn active">1</button>
+            <button class="page-btn">2</button>
+            <button class="page-btn">3</button>
+            <button class="page-btn">→</button>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>maroon & black blog — theme · all rights reserved · <a href="#">firebase admin</a></p>
+    </footer>
+</body>
+</html>
